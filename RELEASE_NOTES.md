@@ -1,22 +1,51 @@
-# DBAegis 1.0.0 Release Notes
+# DBAegis Community 1.0.0 Release Notes
 
-Commit: `ac319b80677b9d50b804bddb83428ad368410d58`
+Release commit: `ac319b80677b9d50b804bddb83428ad368410d58`
+
+## What This Release Includes
+
+DBAegis Community 1.0.0 is the first public Community package.
+
+Community includes:
+
+- Self-hosted DBAegis web UI and FastAPI backend.
+- Community runtime under `app/community/`.
+- Local logical backup and restore for PostgreSQL, MySQL, and MongoDB.
+- DBAegis-local backup storage.
+- Backup history, restore jobs, basic schedules, and basic retention.
+- One local admin user, up to three active connections, and up to three schedules.
+- Installer, upgrade, rollback, and uninstall scripts.
+- Community documentation and release metadata.
+
+## Community Scope
+
+This release does not include paid-edition capabilities such as:
+
+- Cloud backup or cloud restore destinations.
+- DB-server-local storage.
+- Physical backups, physical restores, or PITR.
+- Oracle RMAN, SQL Server PITR, Neo4j, Cassandra, Couchbase, ClickHouse, Snowflake, Redis, SQLite, or other paid-engine runtime support.
+- Email notifications, webhook notifications, daily summaries, LDAP, MFA, RBAC, audit exports, CSV reports, or self-backup.
+
+Those capabilities belong to Professional or Enterprise packages.
 
 ## Validation
 
-- Run the package lifecycle smoke before broad deployment.
-- Verify `/health` and `/api/version` after fresh install, upgrade, and rollback.
-- Verify restore workflows for the target customer database and storage combinations.
+Before broad use, validate the Community-supported paths:
 
-## Recent Changes
+- Fresh install with `DBAEGIS_EDITION=community` and `DBAEGIS_LICENSE_REQUIRED=false`.
+- `/health` and `/api/version`.
+- First admin login.
+- PostgreSQL logical backup and restore.
+- MySQL logical backup and restore.
+- MongoDB logical backup and restore.
+- Schedule creation within the Community limit.
+- Upgrade and rollback on a non-production VM.
 
-- `ac319b8 Polish notification summaries`
-- `49d0a8a Document PITR validation coverage`
-- `f093bb0 Fix GCS streaming temp handling`
-- `751a4e5 Fix Neo4j overwrite restores from GCS`
-- `23fb69a Fix Oracle RMAN remote artifact packaging`
-- `f6ee45e Include Oracle archivelogs in RMAN artifacts`
-- `780ab8b Add SQL Server PITR support`
-- `27c3115 Align backup restore history status handling`
-- `0beb2ea Add audited restore dismiss and retry window`
-- `158cba7 Update docs for login logo`
+## Release Assets
+
+- `community-v1.0.0.tar.gz`
+- `community-v1.0.0.manifest.json`
+- `SHA256SUMS`
+
+Use `sha256sum -c SHA256SUMS` before install.
