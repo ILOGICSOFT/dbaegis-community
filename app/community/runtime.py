@@ -73,6 +73,9 @@ BOOTSTRAP_ADMIN_PASSWORD = os.environ.get("BOOTSTRAP_ADMIN_PASSWORD") or os.envi
 )
 BACKUP_TIMEOUT_SECONDS = max(60, int(os.environ.get("DBAEGIS_BACKUP_TIMEOUT") or "14400"))
 RESTORE_RETRY_WINDOW_SECONDS = 3 * 60 * 60
+LOCAL_STORAGE_ID = "dbaegis_local"
+LOCAL_STORAGE_NAME_SETTING = "storage.dbaegis_local.name"
+LOCAL_STORAGE_PATH_SETTING = "storage.dbaegis_local.path"
 
 app = FastAPI(title="DBAegis Community API", version="1.0.0")
 _SESSIONS: dict[str, dict[str, Any]] = {}
@@ -92,7 +95,25 @@ def _db_path() -> str:
 
 
 def _backup_dir() -> str:
+    configured = _configured_local_storage_path()
+    if configured:
+        return configured
     return os.environ.get("BACKUP_DIR") or os.path.join(os.environ.get("DBAEGIS_BASE", "/opt/dbaegis"), "backups")
+
+
+def _configured_local_storage_path() -> str:
+    db_path = _db_path()
+    if not Path(db_path).exists():
+        return ""
+    try:
+        con = sqlite3.connect(db_path, timeout=3)
+        try:
+            row = con.execute("SELECT value FROM system_settings WHERE key=?", (LOCAL_STORAGE_PATH_SETTING,)).fetchone()
+        finally:
+            con.close()
+        return str(row[0] if row else "").strip()
+    except Exception:
+        return ""
 
 
 def _vm_timestamp(dt: datetime | None = None) -> str:
@@ -308,6 +329,7 @@ def _ensure_tables(con: sqlite3.Connection | None = None) -> None:
         ("next_run_at", "next_run_at TEXT"),
     ):
         _add_col(con, "schedules", name, ddl)
+    cur.execute("CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY, value TEXT)")
     try:
         current_version = con.execute("PRAGMA user_version").fetchone()[0]
         if int(current_version or 0) < int(DB_SCHEMA_VERSION):
@@ -1419,16 +1441,215 @@ def precheck_connection(connection_id: int, request: Request):
 @app.get("/api/storage-destinations/")
 def list_storage(request: Request):
     _require_session(request)
-    return [
-        {
-            "id": "dbaegis_local",
-            "name": "DBAegis local",
-            "storage_type": "dbaegis_local",
-            "dest_type": "dbaegis_local",
-            "active": True,
-            "path": _backup_dir(),
+    con = _db_conn()
+    try:
+        _ensure_tables(con)
+        return [_local_storage_public_view(_local_storage_settings(con))]
+    finally:
+        con.close()
+
+
+def _is_builtin_local_storage_id(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return text in {"", "dbaegis", LOCAL_STORAGE_ID, "local_storage", "local"}
+
+
+def _normalize_community_storage_type(value: Any) -> str:
+    if isinstance(value, dict):
+        value = (
+            value.get("storage_type")
+            or value.get("dest_type")
+            or value.get("type")
+            or value.get("provider")
+            or value.get("destination_type")
+        )
+    text = str(value or "").strip().lower().replace("-", "_")
+    if text in {"", "dbaegis", LOCAL_STORAGE_ID, "local_storage", "local", "filesystem", "fs"}:
+        return LOCAL_STORAGE_ID
+    raise HTTPException(status_code=400, detail="Community supports DBAegis-local storage only")
+
+
+def _path_is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
+def _validate_local_storage_path(value: Any) -> str:
+    path_text = str(value or "").strip()
+    if not path_text:
+        raise HTTPException(status_code=400, detail="Local storage path is required")
+    path = Path(path_text).expanduser()
+    if not path.is_absolute():
+        raise HTTPException(status_code=400, detail="Local storage path must be absolute")
+    base = Path(os.environ.get("DBAEGIS_BASE", "/opt/dbaegis")).resolve(strict=False)
+    normalized = path.resolve(strict=False)
+    forbidden = [base / name for name in ("app", "ui", "bin", "conf", "python", "venv")]
+    if normalized == Path("/"):
+        raise HTTPException(status_code=400, detail="Local storage path cannot be the filesystem root")
+    if any(normalized == root or _path_is_relative_to(normalized, root) for root in forbidden):
+        raise HTTPException(
+            status_code=400,
+            detail="Local storage path cannot point inside DBAegis application, UI, executable, or configuration directories",
+        )
+    return str(normalized)
+
+
+def _local_storage_settings(con: sqlite3.Connection | None = None) -> dict[str, str]:
+    own = con is None
+    if con is None:
+        con = _db_conn()
+    try:
+        _ensure_tables(con)
+        rows = con.execute(
+            "SELECT key, value FROM system_settings WHERE key IN (?, ?)",
+            (LOCAL_STORAGE_NAME_SETTING, LOCAL_STORAGE_PATH_SETTING),
+        ).fetchall()
+        settings = {str(row["key"]): str(row["value"] or "") for row in rows}
+        default_path = os.environ.get("BACKUP_DIR") or os.path.join(
+            os.environ.get("DBAEGIS_BASE", "/opt/dbaegis"), "backups"
+        )
+        return {
+            "name": settings.get(LOCAL_STORAGE_NAME_SETTING) or "DBAegis local",
+            "path": settings.get(LOCAL_STORAGE_PATH_SETTING) or default_path,
         }
-    ]
+    finally:
+        if own:
+            con.close()
+
+
+def _local_storage_public_view(settings: dict[str, str]) -> dict[str, Any]:
+    path = str(settings.get("path") or _backup_dir())
+    name = str(settings.get("name") or "DBAegis local")
+    config = {"path": path, "base_path": path}
+    return {
+        "id": LOCAL_STORAGE_ID,
+        "name": name,
+        "storage_type": LOCAL_STORAGE_ID,
+        "dest_type": LOCAL_STORAGE_ID,
+        "type": "local",
+        "active": True,
+        "path": path,
+        "base_path": path,
+        "config": config,
+    }
+
+
+def _local_storage_payload(payload: dict[str, Any], existing: dict[str, str]) -> dict[str, str]:
+    _normalize_community_storage_type(payload)
+    config = payload.get("config") if isinstance(payload.get("config"), dict) else {}
+    name = str(
+        payload.get("name")
+        or payload.get("destination_name")
+        or config.get("name")
+        or existing.get("name")
+        or "DBAegis local"
+    ).strip()
+    path = (
+        payload.get("path")
+        or payload.get("base_path")
+        or config.get("path")
+        or config.get("base_path")
+        or existing.get("path")
+    )
+    return {"name": name or "DBAegis local", "path": _validate_local_storage_path(path)}
+
+
+def _save_local_storage(payload: dict[str, Any]) -> dict[str, Any]:
+    con = _db_conn()
+    try:
+        _ensure_tables(con)
+        existing = _local_storage_settings(con)
+        storage = _local_storage_payload(payload, existing)
+        for key, value in (
+            (LOCAL_STORAGE_NAME_SETTING, storage["name"]),
+            (LOCAL_STORAGE_PATH_SETTING, storage["path"]),
+        ):
+            con.execute(
+                "INSERT INTO system_settings(key, value) VALUES(?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (key, value),
+            )
+        con.commit()
+        data = _local_storage_public_view(storage)
+        data["detail"] = "Updated"
+        return data
+    finally:
+        con.close()
+
+
+def _run_local_storage_test() -> dict[str, Any]:
+    con = _db_conn()
+    try:
+        settings = _local_storage_settings(con)
+    finally:
+        con.close()
+    path = Path(_validate_local_storage_path(settings["path"]))
+    probe = path / f".dbaegis_storage_test_{secrets.token_hex(8)}"
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        probe.write_text("dbaegis storage test\n", encoding="utf-8")
+        if probe.read_text(encoding="utf-8") != "dbaegis storage test\n":
+            raise RuntimeError("read-back content mismatch")
+        probe.unlink(missing_ok=True)
+    except Exception as exc:
+        try:
+            probe.unlink(missing_ok=True)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=400,
+            detail=f"DBAegis-local storage path {path} is not writable: {exc}",
+        ) from exc
+    storage = _local_storage_public_view(settings)
+    return {
+        "detail": f"Storage {storage['name']} write/delete access verified at {path}",
+        "storage": storage,
+        "validated": True,
+        "remote_verified": False,
+        "status": "ok",
+        "notes": [],
+    }
+
+
+@app.post("/api/storage")
+@app.post("/api/storage/")
+@app.post("/api/storage-destinations")
+@app.post("/api/storage-destinations/")
+async def create_storage(request: Request):
+    _require_session(request)
+    payload = await request.json()
+    return _save_local_storage(payload if isinstance(payload, dict) else {})
+
+
+@app.put("/api/storage/{storage_id}")
+@app.put("/api/storage-destinations/{storage_id}")
+async def update_storage(storage_id: str, request: Request):
+    _require_session(request)
+    if not _is_builtin_local_storage_id(storage_id):
+        raise HTTPException(status_code=404, detail="Storage destination not found")
+    payload = await request.json()
+    return _save_local_storage(payload if isinstance(payload, dict) else {})
+
+
+@app.post("/api/storage/{storage_id}/test")
+@app.post("/api/storage-destinations/{storage_id}/test")
+def test_storage(storage_id: str, request: Request):
+    _require_session(request)
+    if not _is_builtin_local_storage_id(storage_id):
+        raise HTTPException(status_code=404, detail="Storage destination not found")
+    return _run_local_storage_test()
+
+
+@app.delete("/api/storage/{storage_id}")
+@app.delete("/api/storage-destinations/{storage_id}")
+def delete_storage(storage_id: str, request: Request):
+    _require_session(request)
+    if _is_builtin_local_storage_id(storage_id):
+        raise HTTPException(status_code=400, detail="DBAegis-local storage is built in and cannot be removed")
+    raise HTTPException(status_code=404, detail="Storage destination not found")
 
 
 @app.get("/api/backups")

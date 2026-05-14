@@ -4744,6 +4744,18 @@ function storageUsageText(usage) {
   return parts.length ? ('Used by ' + parts.join(' · ')) : 'Not used by active connections or schedules';
 }
 
+function storageUiType(d) {
+  var type = String((d && (d.dest_type || d.storage_type || d.type)) || '').toLowerCase();
+  if (!type || type === 'dbaegis' || type === 'dbaegis_local' || type === 'local_storage') return 'local';
+  return type;
+}
+
+function isBuiltinDbaegisLocalStorage(d) {
+  var id = String((d && d.id) || '').toLowerCase();
+  var type = String((d && (d.storage_type || d.dest_type || d.type)) || '').toLowerCase();
+  return id === 'dbaegis_local' || type === 'dbaegis_local' || type === 'local_storage';
+}
+
 function vStorage() {
   var stored = S.storage || [];
   var DEFS = {
@@ -4791,10 +4803,10 @@ function vStorage() {
   var cards = stored.length === 0
     ? '<div class="card"><div class="empty">No storage destinations configured. Add one above.</div></div>'
     : stored.map(function(d) {
-        var type = d.dest_type||d.type||'local';
+        var type = storageUiType(d);
         var def  = DEFS[type]||{name:type, short:'?', color:'#8896B0'};
         var cfg  = safeJsonObj(d.config);
-        var location = cfg.bucket || cfg.bucket_name || cfg.container || cfg.container_name || cfg.path || cfg.base_path || '';
+        var location = cfg.bucket || cfg.bucket_name || cfg.container || cfg.container_name || cfg.path || cfg.base_path || d.path || d.base_path || '';
         var prefix = cfg.prefix || cfg.path_prefix || '';
         var meta = [
           cfg.region || cfg.location || cfg.bucket_location || '',
@@ -4804,6 +4816,9 @@ function vStorage() {
         var usage = usageById[String(d.id)] || storageUsageInfo(d.id);
         var test = testResults[String(d.id)] || null;
         var storageLicensed = licenseStorageTypeEnabled(type);
+        var storageIdArg = jsArg(d.id);
+        var storageTypeArg = jsArg(type);
+        var builtinLocal = isBuiltinDbaegisLocalStorage(d);
         var testColor = !test ? '#4E5A78' : (test.pending ? '#FFB900' : (test.ok ? '#00D97E' : '#FF5A5A'));
         var testText = !test ? 'No test recorded' : (test.pending ? 'Testing...' : ((test.ok ? 'Passed ' : 'Failed ') + dashboardAgeText(test.checked_at)));
         var testTitle = test && test.message ? test.message : testText;
@@ -4823,9 +4838,11 @@ function vStorage() {
           + '<span title="'+escHtml(testTitle)+'" style="color:'+testColor+'">'+escHtml(testText)+'</span>'
           + '</div></div>'
           + '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">'
-          + '<button class="btn-sm" style="color:#4E9FFF;border-color:#4E9FFF44;background:#4E9FFF12" onclick="openStorageConfig(\''+type+'\','+d.id+')">Edit</button>'
-          + '<button class="btn-sm" '+(storageLicensed?'':'disabled title="'+escHtml(licenseFeatureNotice(def.name))+'"')+' onclick="testStorage('+d.id+')" style="'+(storageLicensed?'':'opacity:.45;cursor:not-allowed')+'">Test</button>'
-          + '<button class="btn-sm" style="color:#FF5A5A;border-color:#FF5A5A44;background:#FF5A5A12" onclick="delStorage('+d.id+')">Remove</button>'
+          + '<button class="btn-sm" style="color:#4E9FFF;border-color:#4E9FFF44;background:#4E9FFF12" onclick="openStorageConfig('+storageTypeArg+','+storageIdArg+')">Edit</button>'
+          + '<button class="btn-sm" '+(storageLicensed?'':'disabled title="'+escHtml(licenseFeatureNotice(def.name))+'"')+' onclick="testStorage('+storageIdArg+')" style="'+(storageLicensed?'':'opacity:.45;cursor:not-allowed')+'">Test</button>'
+          + (builtinLocal
+              ? '<button class="btn-sm" disabled title="DBAegis-local storage is built in and cannot be removed" style="color:#64748B;border-color:#2A3350;background:#131929;opacity:.55;cursor:not-allowed">Remove</button>'
+              : '<button class="btn-sm" style="color:#FF5A5A;border-color:#FF5A5A44;background:#FF5A5A12" onclick="delStorage('+storageIdArg+')">Remove</button>')
           + '</div></div></div>';
       }).join('');
 
@@ -8359,7 +8376,7 @@ async function testStorage(id) {
   setStorageTestResult(id, {pending:true, ok:false, name:dest.name || ('Storage #' + id), message:'Testing storage destination'});
   if (S.nav === 'storage') render();
   try {
-    var r = await apiFetch('/api/storage/' + id + '/test', {method:'POST', timeoutMs:120000});
+    var r = await apiFetch('/api/storage/' + encodeURIComponent(String(id)) + '/test', {method:'POST', timeoutMs:120000});
     setStorageTestResult(id, {pending:false, ok:true, name:dest.name || ((r.storage || {}).name) || ('Storage #' + id), message:r.detail || 'OK', status:r.status || 'ok'});
     showToast(r.detail || 'OK');
     if (S.nav === 'storage') render();
@@ -8385,7 +8402,7 @@ async function delStorage(id) {
       + '\n\nRemoving it can break future backups or restores that depend on this destination.\n\nRemove "' + (dest.name || ('Storage #' + id)) + '" anyway?';
   }
   if (!confirm(msg)) return;
-  try { await apiFetch('/api/storage/' + id, {method:'DELETE'}); showToast('Removed'); refresh(); }
+  try { await apiFetch('/api/storage/' + encodeURIComponent(String(id)), {method:'DELETE'}); showToast('Removed'); refresh(); }
   catch(e) { showToast('Failed: ' + e.message, 'error'); }
 }
 
@@ -9272,11 +9289,12 @@ function openEditSched(id) {
 
 // ─── Storage Config Modal ───────────────────────────────────────────────────
 function openStorageConfig(type, editId) {
-  if (!editId && !licenseStorageTypeEnabled(type)) {
+  var hasEditId = editId !== null && editId !== undefined && String(editId) !== '';
+  if (!hasEditId && !licenseStorageTypeEnabled(type)) {
     showToast(licenseFeatureNotice('Cloud storage destinations'), 'error');
     return;
   }
-  var existing = editId ? (S.storage||[]).find(function(d){return d.id===editId;}) : null;
+  var existing = hasEditId ? (S.storage||[]).find(function(d){return String(d.id)===String(editId);}) : null;
   var existCfg = existing ? safeJsonObj(existing.config) : {};
   var existName = existing ? existing.name : '';
 
@@ -9316,7 +9334,7 @@ function openStorageConfig(type, editId) {
   };
 
   var def = SCHEMA[type]; if (!def) return;
-  var isEdit = !!editId;
+  var isEdit = hasEditId;
 
   // Init form state
   window._stor_form = {dest_type: type, active: existing ? !!existing.active : true};
@@ -9357,7 +9375,7 @@ function openStorageConfig(type, editId) {
     + '<input type="checkbox" '+(window._stor_form.active?'checked':'')+' onchange="window._stor_form.active=this.checked" style="accent-color:#4E9FFF"/> Active</label>'
     + '<div style="display:flex;gap:8px;margin-top:6px">'
     + '<button onclick="window._stor_save()" style="flex:1;padding:10px;background:linear-gradient(135deg,'+def.color+','+def.color+'CC);border:none;border-radius:8px;color:#fff;font-weight:400;font-size:13px;cursor:pointer;font-family:inherit">'+(isEdit?'Update':'Save')+' Destination</button>'
-    + (isEdit ? '<button onclick="testStorage('+editId+');closeModal()" style="padding:10px 16px;background:#1E2640;border:1px solid #2A3350;border-radius:8px;color:#8896B0;font-size:13px;cursor:pointer;font-family:inherit">Test</button>' : '')
+    + (isEdit ? '<button onclick="testStorage('+jsArg(editId)+');closeModal()" style="padding:10px 16px;background:#1E2640;border:1px solid #2A3350;border-radius:8px;color:#8896B0;font-size:13px;cursor:pointer;font-family:inherit">Test</button>' : '')
     + '</div></div></div></div>';
 
   window._stor_save = async function() {
@@ -9415,7 +9433,7 @@ function openStorageConfig(type, editId) {
 
     try {
       if (isEdit) {
-        await apiFetch('/api/storage/'+editId, {method:'PUT', body:JSON.stringify(payload)});
+        await apiFetch('/api/storage/'+encodeURIComponent(String(editId)), {method:'PUT', body:JSON.stringify(payload)});
         showToast(name+' updated!');
       } else {
         await apiFetch('/api/storage/', {method:'POST', body:JSON.stringify(payload)});

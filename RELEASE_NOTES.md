@@ -1,10 +1,10 @@
 # DBAegis Community 1.0.0 Release Notes
 
-Release commit: `ac319b80677b9d50b804bddb83428ad368410d58`
+Release commit: `def7450d595420234a9ca4b742dda84268cc5109`
 
 ## What This Release Includes
 
-DBAegis Community 1.0.0 is the first public Community package.
+DBAegis Community 1.0.0 is the public Community package.
 
 Community includes:
 
@@ -12,6 +12,7 @@ Community includes:
 - Community runtime under `app/community/`.
 - Local logical backup and restore for PostgreSQL, MySQL, and MongoDB.
 - DBAegis-local backup storage.
+- DBAegis-local storage edit and write/delete test actions in the Storage page.
 - Backup history, restore jobs, basic schedules, and basic retention.
 - One local admin user, up to three active connections, and up to three schedules.
 - Installer, upgrade, rollback, and uninstall scripts.
