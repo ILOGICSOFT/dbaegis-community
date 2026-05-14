@@ -102,8 +102,6 @@ The installer uses these main paths:
 | `/opt/dbaegis/backups` | DBAegis-local backup artifacts |
 | `/opt/dbaegis/logs` | Service logs |
 
-Do not store test databases or unrelated files inside `/opt/dbaegis`. Use a separate path such as `/opt/testdatabases`.
-
 ## Documentation
 
 | Topic | Document |
