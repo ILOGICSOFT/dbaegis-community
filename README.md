@@ -10,6 +10,18 @@ Community focuses on local logical backup and restore for:
 
 It includes the DBAegis web UI, FastAPI backend, installer, local metadata store, backup history, restore jobs, schedules, and DBAegis-local storage.
 
+## Screenshots
+
+![DBAegis dashboard](docs/assets/ui-screenshots/dashboard.png)
+
+![Connections](docs/assets/ui-screenshots/connections.png)
+
+![Backup history](docs/assets/ui-screenshots/backup-history.png)
+
+![Restore jobs](docs/assets/ui-screenshots/restore.png)
+
+![Schedules](docs/assets/ui-screenshots/schedules.png)
+
 ## Community Limits
 
 Community is intentionally smaller than the paid editions:
