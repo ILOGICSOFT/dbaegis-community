@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 8 420 158" role="img" aria-labelledby="title desc">
+  <title id="title">DBAegis logo option 1 shield stack</title>
+  <desc id="desc">DBAegis wordmark with a shield and database stack icon.</desc>
+  <defs>
+    <linearGradient id="markGradient" x1="42" y1="28" x2="150" y2="146" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4E9FFF"/>
+      <stop offset="1" stop-color="#00D97E"/>
+    </linearGradient>
+    <linearGradient id="wordGradient" x1="176" y1="50" x2="388" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4E9FFF"/>
+      <stop offset="1" stop-color="#00D97E"/>
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="640" height="180" rx="24" fill="#0B0E17"/>
+  <rect x="14" y="14" width="612" height="152" rx="20" fill="#101827" stroke="#1E2640"/>
+  <path d="M96 28l54 18v40c0 35-21 58-54 70-33-12-54-35-54-70V46l54-18z" fill="#0B0E17" stroke="url(#markGradient)" stroke-width="5"/>
+  <path d="M66 72c0-10 14-18 30-18s30 8 30 18-14 18-30 18-30-8-30-18z" fill="#172033" stroke="#4E9FFF" stroke-width="4"/>
+  <path d="M66 72v34c0 10 14 18 30 18s30-8 30-18V72" fill="none" stroke="#E2E8F0" stroke-width="4" stroke-linecap="round"/>
+  <path d="M66 90c0 10 14 18 30 18s30-8 30-18" fill="none" stroke="#00D97E" stroke-width="4" stroke-linecap="round"/>
+  <path d="M132 58a42 42 0 0 1 0 64" fill="none" stroke="#00D97E" stroke-width="5" stroke-linecap="round" filter="url(#softGlow)"/>
+  <path d="M132 58h17v17" fill="none" stroke="#00D97E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="176" y="98" fill="url(#wordGradient)" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="52" font-weight="800" letter-spacing="0">DBAegis</text>
+  <path d="M180 121h132" stroke="#4E9FFF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M325 121h70" stroke="#00D97E" stroke-width="4" stroke-linecap="round"/>
+</svg>

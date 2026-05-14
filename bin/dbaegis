@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# DBAegis control binary — /opt/dbaegis/bin/dbaegis
+# Usage: dbaegis {start|stop|restart|status|log|version|license|rotate-secret-key|reset-admin-password}
+set -euo pipefail
+
+DBAEGIS_BASE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEFAULT_CONF_FILE="${DBAEGIS_BASE}/conf/dbaegis.conf"
+CONF_FILE="${DBAEGIS_CONF:-}"
+if [[ -z "$CONF_FILE" && -f /etc/systemd/system/dbaegis.service ]]; then
+    CONF_FILE="$(awk -F= '/^EnvironmentFile=/{print substr($0, index($0, "=") + 1); exit}' /etc/systemd/system/dbaegis.service 2>/dev/null || true)"
+fi
+CONF_FILE="${CONF_FILE:-$DEFAULT_CONF_FILE}"
+
+read_conf_value() {
+    local target="$1" key="$2" value
+    [[ -f "$target" ]] || return 0
+    value="$(awk -v key="$key" '
+        /^[[:space:]]*($|#)/ { next }
+        {
+            line = $0
+            sub(/^[[:space:]]*export[[:space:]]+/, "", line)
+            if (line ~ "^[[:space:]]*" key "[[:space:]]*=") {
+                sub(/^[^=]*=/, "", line)
+                sub(/^[[:space:]]*/, "", line)
+                sub(/[[:space:]]*#.*$/, "", line)
+                print line
+                exit
+            }
+        }
+    ' "$target" 2>/dev/null || true)"
+    value="${value%\"}"
+    value="${value#\"}"
+    value="${value%\'}"
+    value="${value#\'}"
+    printf '%s' "$value"
+}
+
+load_conf_var() {
+    local key="$1" dest="${2:-$1}" value
+    value="$(read_conf_value "$CONF_FILE" "$key")"
+    [[ -n "$value" ]] || return 0
+    printf -v "$dest" '%s' "$value"
+    export "$dest"
+}
+
+load_conf_values() {
+    local key
+    for key in \
+        DBAEGIS_DB_PATH BACKUP_DIR SELF_BACKUP_DIR LOG_DIR LOG_BACKUP_COUNT \
+        DBAEGIS_TEMP_DIR DBAEGIS_LICENSE_DIR VENV_DIR DBAEGIS_PYTHON_DIR DBAEGIS_PYTHON_BIN \
+        API_BIND API_PORT UVICORN_WORKERS LOG_LEVEL DBAEGIS_BACKUP_TIMEOUT \
+        AUTH_ENABLED SESSION_COOKIE_NAME SESSION_TTL_HOURS SESSION_COOKIE_SECURE \
+        DBAEGIS_EDITION DBAEGIS_LICENSE_REQUIRED DBAEGIS_LICENSE_KEY DBAEGIS_LICENSE_KEY_FILE \
+        DBAEGIS_LICENSE_PUBLIC_KEY DBAEGIS_LICENSE_PUBLIC_KEY_FILE DBAEGIS_LICENSE_INSTANCE_ID \
+        DBAEGIS_SECRET_KEY BOOTSTRAP_ADMIN_USER BOOTSTRAP_ADMIN_PASSWORD; do
+        load_conf_var "$key"
+    done
+}
+[[ -f "$CONF_FILE" ]] && load_conf_values
+
+VENV_DIR="${VENV_DIR:-${DBAEGIS_BASE}/venv}"
+DBAEGIS_PYTHON_DIR="${DBAEGIS_PYTHON_DIR:-${DBAEGIS_BASE}/python}"
+DBAEGIS_PYTHON_BIN="${DBAEGIS_PYTHON_BIN:-${DBAEGIS_PYTHON_DIR}/bin/python3}"
+LOG_DIR="${LOG_DIR:-${DBAEGIS_BASE}/logs}"
+LOG_BACKUP_COUNT="${LOG_BACKUP_COUNT:-9}"
+API_BIND="${API_BIND:-127.0.0.1}"
+API_PORT="${API_PORT:-8000}"
+UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
+if [[ "$UVICORN_WORKERS" != "1" ]]; then
+    echo "DBAegis uses in-process job cancellation and scheduler state; forcing UVICORN_WORKERS=1" >&2
+    UVICORN_WORKERS=1
+fi
+LOG_LEVEL="${LOG_LEVEL:-info}"
+
+cmd="${1:-help}"
+case "$cmd" in
+    start)
+        cd "${DBAEGIS_BASE}"
+        export PYTHONPATH="${DBAEGIS_BASE}"
+        export DBAEGIS_PYTHON_DIR DBAEGIS_PYTHON_BIN
+        export PATH="${VENV_DIR}/bin:${DBAEGIS_PYTHON_DIR}/bin:${PATH}"
+        exec "${VENV_DIR}/bin/uvicorn" app.main:app \
+            --host "$API_BIND" \
+            --port "$API_PORT" \
+            --workers "$UVICORN_WORKERS" \
+            --log-level "$LOG_LEVEL" \
+            --access-log
+        ;;
+    stop)
+        systemctl stop dbaegis
+        ;;
+    restart)
+        systemctl restart dbaegis
+        ;;
+    status)
+        systemctl status dbaegis
+        ;;
+    log|logs)
+        journalctl -u dbaegis -f
+        ;;
+    version)
+        cd "${DBAEGIS_BASE}"
+        export PYTHONPATH="${DBAEGIS_BASE}"
+        if [[ -x "${VENV_DIR}/bin/python" ]]; then
+            "${VENV_DIR}/bin/python" -m app.version --line && exit 0
+        fi
+        if [[ -x "${DBAEGIS_PYTHON_BIN}" ]]; then
+            "${DBAEGIS_PYTHON_BIN}" -m app.version --line && exit 0
+        fi
+        echo "DBAegis unknown"
+        ;;
+    license)
+        shift
+        cd "${DBAEGIS_BASE}"
+        export PYTHONPATH="${DBAEGIS_BASE}"
+        exec "${VENV_DIR}/bin/python" -m app.license "$@"
+        ;;
+    rotate-secret-key)
+        shift
+        exec "${VENV_DIR}/bin/python" "${DBAEGIS_BASE}/bin/rotate_dbaegis_secret_key.py" \
+            --conf "$CONF_FILE" \
+            "$@"
+        ;;
+    reset-admin-password)
+        shift
+        exec "${VENV_DIR}/bin/python" "${DBAEGIS_BASE}/bin/reset_admin_password.py" \
+            --conf "$CONF_FILE" \
+            "$@"
+        ;;
+    help|--help|-h)
+        echo "Usage: dbaegis {start|stop|restart|status|log|version|license|rotate-secret-key|reset-admin-password}"
+        ;;
+    *)
+        echo "Unknown command: $cmd"
+        echo "Usage: dbaegis {start|stop|restart|status|log|version|license|rotate-secret-key|reset-admin-password}"
+        exit 1
+        ;;
+esac

@@ -1,0 +1,9 @@
+{
+  "build_channel": "stable",
+  "build_time": "2026-05-14T04:56:44Z",
+  "edition": "community",
+  "git_commit": "ac319b80677b9d50b804bddb83428ad368410d58",
+  "product": "DBAegis",
+  "release_name": "DBAegis Community 1.0.0",
+  "version": "1.0.0"
+}

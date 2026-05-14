@@ -1,0 +1,132 @@
+# =============================================================================
+#  DBAegis configuration example
+#  Copy to /opt/dbaegis/conf/dbaegis.conf and set private values locally.
+# =============================================================================
+
+DBAEGIS_BASE=/opt/dbaegis
+APP_DIR=/opt/dbaegis/app
+UI_DIR=/opt/dbaegis/ui
+
+# Preferred metadata DB path variable. Older DB_PATH / VAULT_DB_PATH names
+# are still accepted as fallbacks for compatibility.
+DBAEGIS_DB_PATH=/opt/dbaegis/data/dbaegis.db
+BACKUP_DIR=/backups
+LOG_DIR=/opt/dbaegis/logs
+# DBAegis VM temporary work directory for backup/restore staging
+DBAEGIS_TEMP_DIR=/opt/dbaegis/tmp
+VENV_DIR=/opt/dbaegis/venv
+DBAEGIS_PYTHON_DIR=/opt/dbaegis/python
+DBAEGIS_PYTHON_BIN=/opt/dbaegis/python/bin/python3
+
+API_PORT=8000
+UI_PORT=3000
+
+# TLS / HTTPS
+# Leave TLS_MODE=off for a fresh non-TLS install on UI_PORT.
+# Set TLS_MODE=self_signed or TLS_MODE=customer_provided to enable HTTPS.
+# When TLS is enabled, HTTP_BEHAVIOR can be:
+#   both        keep HTTP and HTTPS active
+#   redirect    redirect HTTP to HTTPS
+#   https_only  disable HTTP completely
+# Production HTTPS deployments should prefer redirect or https_only.
+HTTPS_PORT=3443
+TLS_MODE=off
+HTTP_BEHAVIOR=both
+
+# systemd PrivateTmp isolation for the DBAegis service: yes | no
+# Default is no so database-local backup/restore paths under /tmp remain visible.
+SERVICE_PRIVATE_TMP=no
+
+# Certificate/key/chain paths used when TLS_MODE != off.
+# TLS_SERVER_NAME becomes nginx `server_name` and may contain multiple
+# space-separated hostnames/IPs.
+TLS_SERVER_NAME=localhost
+TLS_CERT_PATH=/opt/dbaegis/tls/server.crt
+TLS_KEY_PATH=/opt/dbaegis/tls/server.key
+TLS_CHAIN_PATH=/opt/dbaegis/tls/chain.crt
+
+# Example patterns:
+#
+# 1. Fresh install, non-TLS:
+#    TLS_MODE=off
+#
+# 2. TLS enabled, keep both HTTP and HTTPS:
+#    TLS_MODE=customer_provided
+#    HTTP_BEHAVIOR=both
+#
+# 3. TLS enabled, redirect HTTP to HTTPS:
+#    TLS_MODE=customer_provided
+#    HTTP_BEHAVIOR=redirect
+#
+# 4. TLS enabled, HTTPS only:
+#    TLS_MODE=customer_provided
+#    HTTP_BEHAVIOR=https_only
+#
+# 5. Custom ports:
+#    API_PORT=18000
+#    UI_PORT=13000
+#    HTTPS_PORT=13443
+#
+# 6. Multiple names in nginx server_name:
+#    TLS_SERVER_NAME=dbaegis.example.com 192.168.1.10 localhost
+
+# API bind address. Keep the FastAPI service local; nginx is the public entrypoint.
+API_BIND=127.0.0.1
+
+SERVICE_USER=dbaegis
+UVICORN_WORKERS=1
+# Preferred backup timeout variable. Older BACKUP_TIMEOUT / VAULT_BACKUP_TIMEOUT
+# names are still accepted as fallbacks for compatibility.
+DBAEGIS_BACKUP_TIMEOUT=14400
+LOG_LEVEL=info
+# Number of rotated dbaegis.log, nginx-access.log, and nginx-error.log files
+# to keep in addition to each active log.
+LOG_BACKUP_COUNT=9
+
+# License enforcement. Professional and Enterprise always require a valid
+# signed license. Community can run without a customer license token.
+DBAEGIS_EDITION=community
+DBAEGIS_LICENSE_REQUIRED=false
+DBAEGIS_LICENSE_DIR=/opt/dbaegis/license
+DBAEGIS_LICENSE_KEY_FILE=/opt/dbaegis/license/dbaegis.license
+DBAEGIS_LICENSE_PUBLIC_KEY_FILE=/opt/dbaegis/license/license_public.pem
+# Optional stable instance ID for host-bound licenses. If blank, DBAegis also
+# considers hostname, FQDN, and machine-id.
+DBAEGIS_LICENSE_INSTANCE_ID=
+
+# Required for manual deployments. Generate a unique value for each install,
+# for example with: openssl rand -hex 32
+DBAEGIS_SECRET_KEY=
+
+AUTH_ENABLED=true
+SESSION_COOKIE_NAME=dbaegis_session
+SESSION_TTL_HOURS=12
+# auto = Secure only for HTTPS requests/proxies; true forces HTTPS-only cookies.
+# Use true when the public endpoint is HTTPS-only but proxy headers are not reliable.
+SESSION_COOKIE_SECURE=auto
+
+# Set during deployment. The installer generates a unique value on fresh installs
+# and does not print it to the install log.
+BOOTSTRAP_ADMIN_USER=admin
+BOOTSTRAP_ADMIN_PASSWORD=
+
+# Optional LDAP auth. Local users continue to work when LDAP is enabled.
+# These keys mirror the LDAP settings exposed in the DBAegis admin UI.
+# Current runtime LDAP settings are stored in DBAegis system settings
+# via the UI/API; these config entries are deployment documentation
+# placeholders for operators and config-management systems.
+LDAP_ENABLED=false
+LDAP_SERVER_URI=
+LDAP_BIND_DN=
+LDAP_BIND_PASSWORD=
+LDAP_USER_BASE_DN=
+LDAP_USER_FILTER='(&(objectClass=person)(|(uid={username})(sAMAccountName={username})(userPrincipalName={username})))'
+LDAP_GROUP_BASE_DN=
+LDAP_ADMIN_GROUP=admin
+LDAP_READ_ONLY_GROUP=read_only
+LDAP_USE_SSL=false
+LDAP_START_TLS=false
+LDAP_VERIFY_CERT=true
+LDAP_CA_CERT_FILE=
+
+SELF_BACKUP_DIR=/backups/self

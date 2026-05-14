@@ -1,0 +1,361 @@
+{
+  "schema_version": 1,
+  "last_reviewed": "2026-05-01",
+  "policy": {
+    "default_installer_behavior": "Install DBAegis-tested exact versions; do not silently promote latest upstream versions.",
+    "candidate_review_cadence": "weekly",
+    "promotion_cadence": "monthly and before every product release",
+    "promotion_rule": "Update tested_version only after unit tests, fresh/upgrade smoke, all-optional install/upgrade, and affected backup/restore matrix pass."
+  },
+  "items": [
+    {
+      "name": "SnowSQL",
+      "kind": "vendor_cli",
+      "tested_version": "1.5.0",
+      "latest_known": "1.5.0",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_tools",
+      "installer_variable": "DBAEGIS_SNOWSQL_VERSION",
+      "risk": "medium",
+      "source": {
+        "type": "html_regex",
+        "url": "https://docs.snowflake.com/en/release-notes/clients-drivers/snowsql-2026",
+        "pattern": "Version\\s+(?P<version>\\d+\\.\\d+\\.\\d+)\\s*\\("
+      },
+      "test_scope": ["all_optional_install", "all_optional_upgrade", "snowflake_logical_backup_restore"]
+    },
+    {
+      "name": "SqlPackage",
+      "kind": "vendor_cli",
+      "tested_version": "170.3.93.6",
+      "latest_known": "170.3.93.6",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_tools",
+      "installer_variable": "DBAEGIS_SQLPACKAGE_URL",
+      "risk": "medium",
+      "source": {
+        "type": "html_regex",
+        "url": "https://learn.microsoft.com/en-us/sql/tools/sqlpackage/sqlpackage-download?view=sql-server-ver17",
+        "pattern": "Build number:</strong>\\s*(?P<version>\\d+(?:\\.\\d+)+)"
+      },
+      "test_scope": ["all_optional_install", "all_optional_upgrade", "mssql_logical_backup_restore", "azuresql_logical_backup_restore"]
+    },
+    {
+      "name": "mssql-tools18 sqlcmd",
+      "kind": "vendor_cli",
+      "tested_version": "18.6.0002.1",
+      "latest_known": "18.6.2.1",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_tools",
+      "installer_variable": "DBAEGIS_INSTALL_SQLCMD",
+      "risk": "medium",
+      "source": {
+        "type": "html_regex",
+        "url": "https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/release-notes-tools?view=sql-server-ver17",
+        "pattern": "<h2[^>]*>\\s*(?P<version>18\\.\\d+\\.\\d+\\.\\d+),"
+      },
+      "test_scope": ["all_optional_install", "all_optional_upgrade", "mssql_connection_precheck", "mssql_physical_restore"]
+    },
+    {
+      "name": "MongoDB Database Tools",
+      "kind": "vendor_cli",
+      "tested_version": "100.16.1",
+      "latest_known": "100.16.1",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_tools",
+      "installer_variable": "DBAEGIS_MONGODB_TOOLS_VERSION",
+      "risk": "medium",
+      "source": {
+        "type": "html_regex",
+        "url": "https://www.mongodb.com/try/download/database-tools/releases/archive",
+        "pattern": "mongodb-database-tools-[^\\\"'<>\\s]+-(?P<version>\\d+\\.\\d+\\.\\d+)\\.(?:tgz|rpm)"
+      },
+      "test_scope": ["all_optional_install", "all_optional_upgrade", "mongodb_logical_backup_restore", "mongodb_physical_backup_restore"]
+    },
+    {
+      "name": "mongosh",
+      "kind": "vendor_cli",
+      "tested_version": "2.8.2",
+      "latest_known": "2.8.2",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_tools",
+      "installer_variable": "DBAEGIS_MONGOSH_VERSION",
+      "risk": "medium",
+      "source": {
+        "type": "html_regex",
+        "url": "https://www.mongodb.com/docs/mongodb-shell/changelog/",
+        "pattern": "id=\\\"v(?P<version>\\d+\\.\\d+\\.\\d+)\\\""
+      },
+      "test_scope": ["all_optional_install", "all_optional_upgrade", "mongodb_connection_precheck", "mongodb_physical_backup_restore"]
+    },
+    {
+      "name": "ClickHouse client",
+      "kind": "vendor_cli",
+      "tested_version": "26.3.9.8",
+      "latest_known": "26.3.9.8",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_tools",
+      "installer_variable": "DBAEGIS_CLICKHOUSE_VERSION",
+      "risk": "medium",
+      "source": {
+        "type": "github_release_tags",
+        "repo": "ClickHouse/ClickHouse",
+        "pattern": "^v(?P<version>\\d+\\.\\d+\\.\\d+\\.\\d+)-(?:stable|lts)$"
+      },
+      "test_scope": ["all_optional_install", "all_optional_upgrade", "clickhouse_logical_backup_restore"]
+    },
+    {
+      "name": "pip",
+      "kind": "python_build",
+      "tested_version": "26.1",
+      "latest_known": "26.1",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "python_build",
+      "risk": "low",
+      "source": {"type": "pypi", "package": "pip"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade"]
+    },
+    {
+      "name": "wheel",
+      "kind": "python_build",
+      "tested_version": "0.47.0",
+      "latest_known": "0.47.0",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "python_build",
+      "risk": "low",
+      "source": {"type": "pypi", "package": "wheel"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade"]
+    },
+    {
+      "name": "setuptools",
+      "kind": "python_build",
+      "tested_version": "82.0.1",
+      "latest_known": "82.0.1",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "python_build",
+      "risk": "low",
+      "source": {"type": "pypi", "package": "setuptools"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade"]
+    },
+    {
+      "name": "fastapi",
+      "kind": "python_core",
+      "tested_version": "0.136.1",
+      "latest_known": "0.136.1",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "core_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "fastapi"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade", "api_smoke"]
+    },
+    {
+      "name": "uvicorn",
+      "kind": "python_core",
+      "tested_version": "0.46.0",
+      "latest_known": "0.46.0",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "core_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "uvicorn"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade", "api_smoke"]
+    },
+    {
+      "name": "pydantic",
+      "kind": "python_core",
+      "tested_version": "2.13.3",
+      "latest_known": "2.13.3",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "core_python",
+      "risk": "high",
+      "source": {"type": "pypi", "package": "pydantic"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade", "api_smoke"]
+    },
+    {
+      "name": "httpx",
+      "kind": "python_core",
+      "tested_version": "0.28.1",
+      "latest_known": "0.28.1",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "core_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "httpx"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade", "webhook_and_cloud_tests"]
+    },
+    {
+      "name": "aiohttp",
+      "kind": "python_core",
+      "tested_version": "3.13.5",
+      "latest_known": "3.13.5",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "core_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "aiohttp"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade", "cloud_restore_matrix"]
+    },
+    {
+      "name": "python-multipart",
+      "kind": "python_core",
+      "tested_version": "0.0.27",
+      "latest_known": "0.0.27",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "core_python",
+      "risk": "low",
+      "source": {"type": "pypi", "package": "python-multipart"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade", "api_upload_smoke"]
+    },
+    {
+      "name": "aiofiles",
+      "kind": "python_core",
+      "tested_version": "25.1.0",
+      "latest_known": "25.1.0",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "core_python",
+      "risk": "low",
+      "source": {"type": "pypi", "package": "aiofiles"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade"]
+    },
+    {
+      "name": "croniter",
+      "kind": "python_core",
+      "tested_version": "6.2.2",
+      "latest_known": "6.2.2",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "core_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "croniter"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade", "scheduler_smoke"]
+    },
+    {
+      "name": "cryptography",
+      "kind": "python_core",
+      "tested_version": "47.0.0",
+      "latest_known": "47.0.0",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "core_python",
+      "risk": "high",
+      "source": {"type": "pypi", "package": "cryptography"},
+      "test_scope": ["unit_tests", "fresh_install", "upgrade", "secret_rotation", "backup_restore_matrix"]
+    },
+    {
+      "name": "cassandra-driver",
+      "kind": "python_optional_db",
+      "tested_version": "3.30.0",
+      "latest_known": "3.30.0",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_db_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "cassandra-driver"},
+      "test_scope": ["unit_tests", "cassandra_logical_backup_restore"]
+    },
+    {
+      "name": "ldap3",
+      "kind": "python_optional_db",
+      "tested_version": "2.9.1",
+      "latest_known": "2.9.1",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_db_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "ldap3"},
+      "test_scope": ["unit_tests", "ldap_login_smoke"]
+    },
+    {
+      "name": "neo4j",
+      "kind": "python_optional_db",
+      "tested_version": "6.1.0",
+      "latest_known": "6.1.0",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_db_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "neo4j"},
+      "test_scope": ["unit_tests", "neo4j_logical_backup_restore"]
+    },
+    {
+      "name": "oracledb",
+      "kind": "python_optional_db",
+      "tested_version": "3.4.2",
+      "latest_known": "3.4.2",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_db_python",
+      "risk": "high",
+      "source": {"type": "pypi", "package": "oracledb"},
+      "test_scope": ["unit_tests", "oracle_logical_backup_restore"]
+    },
+    {
+      "name": "pymssql",
+      "kind": "python_optional_db",
+      "tested_version": "2.3.13",
+      "latest_known": "2.3.13",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_db_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "pymssql"},
+      "test_scope": ["unit_tests", "mssql_connection_precheck"]
+    },
+    {
+      "name": "cqlsh",
+      "kind": "python_optional_cli",
+      "tested_version": "6.2.2",
+      "latest_known": "6.2.2",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_db_cli_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "cqlsh"},
+      "test_scope": ["all_optional_install", "all_optional_upgrade", "cassandra_raw_cql_restore"]
+    },
+    {
+      "name": "boto3",
+      "kind": "python_optional_cloud",
+      "tested_version": "1.43.1",
+      "latest_known": "1.43.1",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_cloud_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "boto3"},
+      "test_scope": ["unit_tests", "s3_backup_restore_matrix"]
+    },
+    {
+      "name": "google-cloud-storage",
+      "kind": "python_optional_cloud",
+      "tested_version": "3.10.1",
+      "latest_known": "3.10.1",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_cloud_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "google-cloud-storage"},
+      "test_scope": ["unit_tests", "gcs_backup_restore_matrix"]
+    },
+    {
+      "name": "google-cloud-firestore",
+      "kind": "python_optional_cloud",
+      "tested_version": "2.27.0",
+      "latest_known": "2.27.0",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_cloud_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "google-cloud-firestore"},
+      "test_scope": ["unit_tests", "firestore_backup_restore_matrix"]
+    },
+    {
+      "name": "azure-storage-blob",
+      "kind": "python_optional_cloud",
+      "tested_version": "12.28.0",
+      "latest_known": "12.28.0",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_cloud_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "azure-storage-blob"},
+      "test_scope": ["unit_tests", "azure_blob_backup_restore_matrix"]
+    },
+    {
+      "name": "azure-cosmos",
+      "kind": "python_optional_cloud",
+      "tested_version": "4.15.0",
+      "latest_known": "4.15.0",
+      "latest_checked": "2026-05-01",
+      "installer_scope": "optional_cloud_python",
+      "risk": "medium",
+      "source": {"type": "pypi", "package": "azure-cosmos"},
+      "test_scope": ["unit_tests", "cosmos_backup_restore_matrix"]
+    }
+  ]
+}
